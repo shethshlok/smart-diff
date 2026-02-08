@@ -1,0 +1,5 @@
+{
+  "name": "Smart Diff Checker",
+  "description": "A powerful text comparison tool that visualizes differences between two text inputs. Features a side-by-side split view, unified view, and an AI-powered summary of changes using Google Gemini.",
+  "requestFramePermissions": []
+}
