@@ -15,6 +15,7 @@ export interface DiffLine {
   lineNumberLeft?: number;
   lineNumberRight?: number;
   segments?: DiffSegment[];
+  diffIndex?: number;
 }
 
 export interface DiffResult {

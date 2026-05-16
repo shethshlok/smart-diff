@@ -1,14 +1,16 @@
 import React, { useMemo } from 'react';
 import * as Diff from 'diff';
 import { ViewMode, DiffLine, DiffSegment } from '../types';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 interface DiffViewerProps {
   originalText: string;
   changedText: string;
   viewMode: ViewMode;
+  onMerge?: (newOriginal: string, newChanged: string) => void;
 }
 
-export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedText, viewMode }) => {
+export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedText, viewMode, onMerge }) => {
   
   // Logic to process diffs and align them for split view
   const processedDiff = useMemo(() => {
@@ -50,23 +52,25 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
                   type: 'removed',
                   content: leftContent,
                   lineNumberLeft: leftLineNum++,
-                  segments: segments
+                  segments: segments,
+                  diffIndex: i
                 });
 
                 rightLines.push({
                   type: 'added',
                   content: rightContent,
                   lineNumberRight: rightLineNum++,
-                  segments: segments
+                  segments: segments,
+                  diffIndex: i
                 });
              } else if (leftContent !== undefined) {
                 // Only left exists (deletion)
-                leftLines.push({ type: 'removed', content: leftContent, lineNumberLeft: leftLineNum++ });
+                leftLines.push({ type: 'removed', content: leftContent, lineNumberLeft: leftLineNum++, diffIndex: i });
                 rightLines.push({ type: 'empty', content: '', lineNumberRight: undefined });
              } else {
                 // Only right exists (addition)
                 leftLines.push({ type: 'empty', content: '', lineNumberLeft: undefined });
-                rightLines.push({ type: 'added', content: rightContent, lineNumberRight: rightLineNum++ });
+                rightLines.push({ type: 'added', content: rightContent, lineNumberRight: rightLineNum++, diffIndex: i });
              }
           }
           
@@ -81,9 +85,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
       lines.forEach(line => {
         if (part.added) {
           leftLines.push({ type: 'empty', content: '', lineNumberLeft: undefined });
-          rightLines.push({ type: 'added', content: line, lineNumberRight: rightLineNum++ });
+          rightLines.push({ type: 'added', content: line, lineNumberRight: rightLineNum++, diffIndex: i });
         } else if (part.removed) {
-          leftLines.push({ type: 'removed', content: line, lineNumberLeft: leftLineNum++ });
+          leftLines.push({ type: 'removed', content: line, lineNumberLeft: leftLineNum++, diffIndex: i });
           rightLines.push({ type: 'empty', content: '', lineNumberRight: undefined });
         } else {
           leftLines.push({ type: 'neutral', content: line, lineNumberLeft: leftLineNum++ });
@@ -97,23 +101,66 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
     let uLeftNum = 1;
     let uRightNum = 1;
     
-    changes.forEach((part) => {
+    for (let i = 0; i < changes.length; i++) {
+       const part = changes[i];
        const lines = part.value.replace(/\n$/, '').split('\n');
-       if(part.value === "") return;
+       if(part.value === "") continue;
        
        lines.forEach(line => {
           if (part.added) {
-             unifiedLines.push({ type: 'added', content: line, lineNumberRight: uRightNum++ });
+             unifiedLines.push({ type: 'added', content: line, lineNumberRight: uRightNum++, diffIndex: i });
           } else if (part.removed) {
-             unifiedLines.push({ type: 'removed', content: line, lineNumberLeft: uLeftNum++ });
+             unifiedLines.push({ type: 'removed', content: line, lineNumberLeft: uLeftNum++, diffIndex: i });
           } else {
              unifiedLines.push({ type: 'neutral', content: line, lineNumberLeft: uLeftNum++, lineNumberRight: uRightNum++ });
           }
        });
-    });
+    }
 
-    return { leftLines, rightLines, unifiedLines };
+    return { changes, leftLines, rightLines, unifiedLines };
   }, [originalText, changedText]);
+
+  const handleMerge = (diffIndex: number, direction: 'left-to-right' | 'right-to-left') => {
+    if (!onMerge) return;
+
+    const changes = processedDiff.changes;
+    let newLeftText = '';
+    let newRightText = '';
+
+    for (let k = 0; k < changes.length; k++) {
+      const part = changes[k];
+      const isTarget = k === diffIndex ||
+        (part.added && k - 1 === diffIndex && changes[k - 1].removed) ||
+        (part.removed && k + 1 === diffIndex && changes[k + 1].added);
+
+      if (isTarget) {
+        if (direction === 'left-to-right') {
+          if (part.removed) {
+            newLeftText += part.value;
+            newRightText += part.value;
+          }
+          // If added, ignore it
+        } else if (direction === 'right-to-left') {
+          if (part.added) {
+            newLeftText += part.value;
+            newRightText += part.value;
+          }
+          // If removed, ignore it
+        }
+      } else {
+        if (!part.added && !part.removed) {
+          newLeftText += part.value;
+          newRightText += part.value;
+        } else if (part.removed) {
+          newLeftText += part.value;
+        } else if (part.added) {
+          newRightText += part.value;
+        }
+      }
+    }
+
+    onMerge(newLeftText, newRightText);
+  };
 
 
   const renderSegmentedLine = (line: DiffLine, side: 'left' | 'right') => {
@@ -167,13 +214,23 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
 
     if (side === 'unified') {
        return (
-        <div className={`flex w-full ${bgClass} hover:opacity-90`}>
+        <div className={`flex w-full ${bgClass} hover:opacity-90 group relative`}>
           <div className="w-12 flex-shrink-0 text-right pr-2 text-xs text-slate-400 select-none py-0.5 border-r border-slate-200/50 bg-slate-50">{numLeft}</div>
           <div className="w-12 flex-shrink-0 text-right pr-2 text-xs text-slate-400 select-none py-0.5 border-r border-slate-200/50 bg-slate-50">{numRight}</div>
           <div className="w-6 flex-shrink-0 text-center text-xs text-slate-400 select-none py-0.5">{prefix}</div>
           <div className={`flex-1 px-2 font-mono text-sm whitespace-pre-wrap break-all py-0.5 ${textClass}`}>
              {line.content}
           </div>
+          {onMerge && line.diffIndex !== undefined && (
+            <div className="absolute right-2 top-0.5 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => handleMerge(line.diffIndex!, 'right-to-left')} title="Push Left" className="p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded shadow-sm text-slate-600 z-10">
+                <ArrowLeft size={14} />
+              </button>
+              <button onClick={() => handleMerge(line.diffIndex!, 'left-to-right')} title="Push Right" className="p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded shadow-sm text-slate-600 z-10">
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
        )
     }
@@ -182,12 +239,26 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
     const lineNum = side === 'left' ? numLeft : numRight;
     
     return (
-      <div className={`flex w-full ${bgClass} min-h-[1.5rem]`}>
+      <div className={`flex w-full ${bgClass} min-h-[1.5rem] group relative`}>
         <div className="w-10 flex-shrink-0 text-right pr-2 text-xs text-slate-400 select-none py-0.5 border-r border-slate-200/50 bg-slate-50">
           {line.type !== 'empty' ? lineNum : ''}
         </div>
         <div className={`flex-1 px-2 font-mono text-sm whitespace-pre-wrap break-all py-0.5 ${textClass}`}>
           {line.type !== 'empty' ? (line.segments ? renderSegmentedLine(line, side) : line.content) : ''}
+          {onMerge && side === 'left' && line.diffIndex !== undefined && line.type !== 'empty' && (
+            <div className="absolute right-2 top-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => handleMerge(line.diffIndex!, 'left-to-right')} title="Push Right" className="p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded shadow-sm text-slate-600 z-10">
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+          {onMerge && side === 'right' && line.diffIndex !== undefined && line.type !== 'empty' && (
+             <div className="absolute left-2 top-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button onClick={() => handleMerge(line.diffIndex!, 'right-to-left')} title="Push Left" className="p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded shadow-sm text-slate-600 z-10">
+                 <ArrowLeft size={14} />
+               </button>
+             </div>
+          )}
         </div>
       </div>
     );

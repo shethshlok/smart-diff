@@ -300,6 +300,10 @@ const App: React.FC = () => {
                     originalText={originalText} 
                     changedText={changedText} 
                     viewMode={viewMode} 
+                    onMerge={(newOrig, newChanged) => {
+                      setOriginalText(newOrig);
+                      setChangedText(newChanged);
+                    }}
                   />
                 </div>
               )}
@@ -398,6 +402,10 @@ const App: React.FC = () => {
               originalText={originalText} 
               changedText={changedText} 
               viewMode={viewMode} 
+              onMerge={(newOrig, newChanged) => {
+                setOriginalText(newOrig);
+                setChangedText(newChanged);
+              }}
             />
           </div>
         )}
