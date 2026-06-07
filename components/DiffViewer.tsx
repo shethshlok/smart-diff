@@ -8,9 +8,10 @@ interface DiffViewerProps {
   changedText: string;
   viewMode: ViewMode;
   onMerge?: (newOriginal: string, newChanged: string) => void;
+  hideUnchanged?: boolean;
 }
 
-export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedText, viewMode, onMerge }) => {
+export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedText, viewMode, onMerge, hideUnchanged }) => {
   
   // Logic to process diffs and align them for split view
   const processedDiff = useMemo(() => {
@@ -269,10 +270,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
       <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
            <div className="min-w-full">
-            {processedDiff.unifiedLines.map((line, idx) => (
-              <React.Fragment key={idx}>{renderLine(line, 'unified')}</React.Fragment>
-            ))}
-            {processedDiff.unifiedLines.length === 0 && <div className="p-8 text-center text-slate-400">No content to compare</div>}
+            {processedDiff.unifiedLines.map((line, idx) => {
+              if (hideUnchanged && line.type === 'neutral') return null;
+              return <React.Fragment key={idx}>{renderLine(line, 'unified')}</React.Fragment>;
+            })}
+            {processedDiff.unifiedLines.filter(line => !hideUnchanged || line.type !== 'neutral').length === 0 && <div className="p-8 text-center text-slate-400">No content to compare</div>}
            </div>
         </div>
       </div>
@@ -285,10 +287,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
       <div className="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-slate-200">
         <div className="overflow-x-auto custom-scrollbar">
           <div className="min-w-full">
-            {processedDiff.leftLines.map((line, idx) => (
-              <React.Fragment key={`left-${idx}`}>{renderLine(line, 'left')}</React.Fragment>
-            ))}
-            {processedDiff.leftLines.length === 0 && <div className="p-8 text-center text-slate-400">Original text empty</div>}
+            {processedDiff.leftLines.map((line, idx) => {
+              if (hideUnchanged && line.type === 'neutral') return null;
+              return <React.Fragment key={`left-${idx}`}>{renderLine(line, 'left')}</React.Fragment>;
+            })}
+            {processedDiff.leftLines.filter(line => !hideUnchanged || line.type !== 'neutral').length === 0 && <div className="p-8 text-center text-slate-400">Original text empty</div>}
           </div>
         </div>
       </div>
@@ -296,10 +299,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ originalText, changedTex
       <div className="w-full md:w-1/2">
         <div className="overflow-x-auto custom-scrollbar">
           <div className="min-w-full">
-             {processedDiff.rightLines.map((line, idx) => (
-              <React.Fragment key={`right-${idx}`}>{renderLine(line, 'right')}</React.Fragment>
-            ))}
-            {processedDiff.rightLines.length === 0 && <div className="p-8 text-center text-slate-400">Changed text empty</div>}
+             {processedDiff.rightLines.map((line, idx) => {
+              if (hideUnchanged && line.type === 'neutral') return null;
+              return <React.Fragment key={`right-${idx}`}>{renderLine(line, 'right')}</React.Fragment>;
+            })}
+            {processedDiff.rightLines.filter(line => !hideUnchanged || line.type !== 'neutral').length === 0 && <div className="p-8 text-center text-slate-400">Changed text empty</div>}
           </div>
         </div>
       </div>

@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Settings,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Filter
 } from 'lucide-react';
 
 // Sample data for quick testing
@@ -49,6 +50,7 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.SPLIT);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [hideUnchanged, setHideUnchanged] = useState(false);
   
   // Merge States
   const [activeTab, setActiveTab] = useState<'compare' | 'merge'>('compare');
@@ -292,8 +294,10 @@ const App: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Changes Reference</h4>
                     <div className="flex items-center space-x-2 bg-slate-100 p-0.5 rounded-md">
-                      <button onClick={() => setViewMode(ViewMode.SPLIT)} className={`p-1 rounded ${viewMode === ViewMode.SPLIT ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}><Split size={14} /></button>
-                      <button onClick={() => setViewMode(ViewMode.UNIFIED)} className={`p-1 rounded ${viewMode === ViewMode.UNIFIED ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}><Combine size={14} /></button>
+                      <button onClick={() => setViewMode(ViewMode.SPLIT)} className={`p-1 rounded ${viewMode === ViewMode.SPLIT ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`} title="Split"><Split size={14} /></button>
+                      <button onClick={() => setViewMode(ViewMode.UNIFIED)} className={`p-1 rounded ${viewMode === ViewMode.UNIFIED ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`} title="Unified"><Combine size={14} /></button>
+                      <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                      <button onClick={() => setHideUnchanged(!hideUnchanged)} className={`p-1 rounded ${hideUnchanged ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`} title="Changes Only"><Filter size={14} /></button>
                     </div>
                   </div>
                   <DiffViewer 
@@ -304,6 +308,7 @@ const App: React.FC = () => {
                       setOriginalText(newOrig);
                       setChangedText(newChanged);
                     }}
+                    hideUnchanged={hideUnchanged}
                   />
                 </div>
               )}
@@ -344,19 +349,30 @@ const App: React.FC = () => {
             
             {/* Toolbar for Diff View */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm gap-4">
-              <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode(ViewMode.SPLIT)}
-                  className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === ViewMode.SPLIT ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Split className="w-4 h-4 mr-2" /> Split
-                </button>
-                <button
-                  onClick={() => setViewMode(ViewMode.UNIFIED)}
-                  className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === ViewMode.UNIFIED ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Combine className="w-4 h-4 mr-2" /> Unified
-                </button>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setViewMode(ViewMode.SPLIT)}
+                    className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === ViewMode.SPLIT ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <Split className="w-4 h-4 mr-2" /> Split
+                  </button>
+                  <button
+                    onClick={() => setViewMode(ViewMode.UNIFIED)}
+                    className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === ViewMode.UNIFIED ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <Combine className="w-4 h-4 mr-2" /> Unified
+                  </button>
+                </div>
+                <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+                <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setHideUnchanged(!hideUnchanged)}
+                    className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${hideUnchanged ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <Filter className="w-4 h-4 mr-2" /> Changes Only
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -406,6 +422,7 @@ const App: React.FC = () => {
                 setOriginalText(newOrig);
                 setChangedText(newChanged);
               }}
+              hideUnchanged={hideUnchanged}
             />
           </div>
         )}
